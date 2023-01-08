@@ -1,0 +1,4 @@
+rootProject.name = "ThugTools"
+
+include ':app'
+include ':thugtools'
