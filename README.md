@@ -1,0 +1,2 @@
+# thugtools
+Basic android functionalities.
