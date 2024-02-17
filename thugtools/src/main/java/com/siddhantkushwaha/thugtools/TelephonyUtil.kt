@@ -146,6 +146,78 @@ object TelephonyUtil {
         return messages
     }
 
+    @SuppressLint("Range")
+    fun getSms(
+        context: Context,
+        smsId: Int
+    ): SMSMessage? {
+        var message: SMSMessage? = null
+        if (checkPermissions(context, arrayOf(Manifest.permission.READ_SMS)).isEmpty()) {
+
+            val cursor = context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                null,
+                "${Telephony.Sms._ID} = $smsId",
+                null,
+                null
+            )
+
+            if (cursor != null && cursor.moveToFirst()) {
+                try {
+                    val dbSmsId = cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Sms._ID))
+                    if (dbSmsId != smsId) {
+                        throw Exception("Unexpected error input sms id and out sms id do not match.")
+                    }
+
+                    val threadId =
+                        cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID))
+
+                    val user2: String =
+                        cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS))!!
+
+                    val body: String =
+                        cursor.getString(cursor.getColumnIndexOrThrow(Telephony.Sms.BODY))
+
+                    // Epoch time in milliseconds
+                    val date = cursor.getLong(cursor.getColumnIndexOrThrow(Telephony.Sms.DATE))
+
+                    /*
+                        1 - Received
+                        2 - Sent
+                    */
+                    val type: Int =
+                        cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Sms.TYPE))
+
+                    val isRead = cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Sms.READ))
+
+                    val subId =
+                        if (cursor.columnNames.find { it == Telephony.Sms.SUBSCRIPTION_ID } != null) {
+                            cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Sms.SUBSCRIPTION_ID))
+                        } else {
+                            cursor.getInt(cursor.getColumnIndex("sim_id"))
+                        }
+
+                    message = SMSMessage(
+                        threadId = threadId,
+                        id = smsId,
+                        user2 = user2,
+                        timestamp = date,
+                        body = body,
+                        type = type,
+                        subId = subId,
+                        isRead = isRead == 1
+                    )
+                } catch (exp: Exception) {
+                    exp.printStackTrace()
+                } finally {
+                    cursor.close()
+                }
+            }
+
+        }
+        return message
+    }
+
     fun saveSms(context: Context, smsMessage: SMSMessage): Int {
         val values = ContentValues()
 
@@ -230,6 +302,7 @@ object TelephonyUtil {
                                 ContactsContract.CommonDataKinds.Phone.TYPE_CUSTOM -> {
                                     cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.LABEL))
                                 }
+
                                 else -> {
                                     ContactsContract.CommonDataKinds.Phone.getTypeLabel(
                                         context.resources,
