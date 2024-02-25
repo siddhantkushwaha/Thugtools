@@ -86,7 +86,7 @@ object TelephonyUtil {
                 null,
                 "${Telephony.Sms.DATE} >= $fromTimeMillis", // get messages after from time
                 null,
-                "${Telephony.Sms.DATE} DESC" // latest messages at the top
+                "${Telephony.Sms.DATE} ASC" // latest messages at the top
             )
 
             if (cursor != null) {
